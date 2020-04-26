@@ -1,4 +1,5 @@
-use std::io::Read;
+use std::io::{Read, BufReader};
+use std::io::*;
 
 #[derive(Debug)]
 pub enum HttpMethod {
@@ -11,10 +12,13 @@ pub enum HttpMethod {
     Unknown,
 }
 
-pub struct Request<'a> {
-    pub uri: &'a str,
-    pub method: HttpMethod,
-    pub reader: Box<dyn Read>,
+pub struct Response<'a> {
+    pub result: &'a [u8]
+}
+
+pub struct Request {
+    pub request_meta: RequestMeta,
+    pub request_stream: Box<dyn Read>,
 }
 
 #[derive(Debug)]
@@ -24,11 +28,9 @@ pub struct RequestMeta {
     pub uri: String,
 }
 
-pub struct Response {}
 
 pub struct HandlerError {}
 
-pub type Handler = dyn FnOnce(Request) -> std::result::Result<Response, HandlerError>;
 
 pub fn get_http_meta(line: &str) -> Option<RequestMeta> {
     let splits: Vec<&str> = line.split(" ").collect();
@@ -49,4 +51,11 @@ pub fn get_http_meta(line: &str) -> Option<RequestMeta> {
         uri: String::from(path),
         version: String::from(version_splits[1].trim()),
     })
+}
+
+pub fn handler<'a>(request: Request) -> std::result::Result<Response<'a>, HandlerError> {
+    let mut buffer = String::new();
+    let mut reader = BufReader::new(request.request_stream);
+
+    Ok(Response { result: "Success".as_bytes() })
 }

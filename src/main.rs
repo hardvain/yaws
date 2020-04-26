@@ -1,9 +1,11 @@
 use std::thread;
 use std::net::{TcpListener, TcpStream, Shutdown};
-use std::io::{Read, Write};
+use std::io::{Read, Write, BufReader};
 use std::env;
 use std::str;
 use std::collections::HashMap;
+use std::io::*;
+
 use crate::http::*;
 
 mod stream;
@@ -15,17 +17,9 @@ fn main() {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).unwrap();
     println!("Server listening on port {}", port);
 
-    let mut handlers: HashMap<String, Box<Handler>> = HashMap::new();
-    handlers.insert(String::from("/list"), Box::new(handler));
-
     for stream in listener.incoming() {
         stream::handle_request(stream)
     }
     // close the socket server
     drop(listener);
-}
-
-
-fn handler(request: Request) -> std::result::Result<Response, HandlerError> {
-    Ok(Response {})
 }

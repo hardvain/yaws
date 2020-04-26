@@ -16,11 +16,27 @@ pub fn handle_request(mut stream: std::io::Result<TcpStream>) {
 pub fn handle_connection(mut stream: TcpStream) {
     let mut reader = BufReader::new(&stream);
     let mut buffer = String::new();
-    reader.read_line(&mut buffer);
-    let option = get_http_meta(&buffer);
-    println!("{:?}", option);
-    let response = "HTTP/1.1 200 OK\r\n\r\n";
-
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    match reader.read_line(&mut buffer) {
+        Ok(_) => if let Some(meta) = get_http_meta(&buffer) {
+            let rest = Box::new(stream.try_clone().unwrap());
+            if let Ok(mut response) = handler(Request {
+                request_meta: meta,
+                request_stream: rest,
+            }) {
+                let mut result: Vec<u8> = vec![];
+                result.extend_from_slice("HTTP/1.1 200 OK\r\n\r\n".as_bytes());
+                result.extend_from_slice(response.result);
+                stream.write(&result[..]).unwrap();
+                stream.flush().unwrap();
+            }
+        }
+        Err(_) => {
+            let mut result: Vec<u8> = vec![];
+            result.extend_from_slice("HTTP/1.1 500 Internal Server Error\r\n\r\n".as_bytes());
+            stream.write(&result[..]).unwrap();
+            stream.flush().unwrap();
+        }
+    }
 }
+
+
